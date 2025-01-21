@@ -1,0 +1,261 @@
+<script>
+    window.onload = function () {
+        document.getElementById('applyFilter').addEventListener('change', toggleFilterTextarea);
+        document.getElementById('applyOrder').addEventListener('change', toggleOrderTextarea);
+        document.getElementById('applySelect').addEventListener('change', toggleSelectColumns);
+        document.getElementById('previewButton').addEventListener('click', function () {
+            // Trigger function to fetch and display preview records
+            previewRecords();
+        });
+    };
+
+    function toggleFilterTextarea() {
+        const filterContainer = document.getElementById('filterContainer');
+        const existingTextarea = document.getElementById('filterTextarea');
+        if (document.getElementById('applyFilter').checked) {
+            if (!existingTextarea) {
+                const textarea = document.createElement('textarea');
+                textarea.id = 'filterTextarea';
+                textarea.className = 'scrollable-textarea';
+                textarea.rows = 5;
+                textarea.placeholder = 'Enter filter criteria here...';
+                filterContainer.appendChild(textarea);
+            }
+        } else {
+            if (existingTextarea) {
+                filterContainer.removeChild(existingTextarea);
+            }
+        }
+    }
+
+    function toggleOrderTextarea() {
+        const orderContainer = document.getElementById('orderContainer');
+        const existingTextarea = document.getElementById('orderTextarea');
+        if (document.getElementById('applyOrder').checked) {
+            if (!existingTextarea) {
+                const textarea = document.createElement('textarea');
+                textarea.id = 'orderTextarea';
+                textarea.className = 'scrollable-textarea';
+                textarea.rows = 3;
+                textarea.placeholder = 'Enter ordering criteria here...';
+                orderContainer.appendChild(textarea);
+            }
+        } else {
+            if (existingTextarea) {
+                orderContainer.removeChild(existingTextarea);
+            }
+        }
+    }
+
+    function toggleSelectColumns() {
+        const selectContainer = document.getElementById('selectContainer');
+        if (document.getElementById('applySelect').checked) {
+            selectContainer.style.display = 'block';
+        } else {
+            selectContainer.style.display = 'none';
+        }
+    }
+
+    async function loadColumns() {
+        // const datasetId = document.getElementById('dataset').value;
+        const tableId = document.getElementById('tableName').value;
+
+        if (/*!datasetId || */!tableId) {
+            return;
+        }
+
+        try {
+            const columns = await new Promise((resolve, reject) => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).getColumns(tableId);
+            });
+
+            const columnDropdown = document.getElementById('columnDropdown');
+            columnDropdown.innerHTML = '<option value="">Select a column</option>';
+            columns.forEach(column => {
+                const option = document.createElement('option');
+                option.value = column;
+                option.text = column;
+                columnDropdown.add(option);
+            });
+        } catch (error) {
+            console.error('Error loading columns:', error);
+        }
+    }
+
+    function addColumn() {
+        const columnDropdown = document.getElementById('columnDropdown');
+        const selectedColumn = columnDropdown.value;
+
+        if (!selectedColumn || selectedColumn === 'Select a column') {
+            return;
+        }
+
+        const selectedColumns = document.getElementById('selectedColumns');
+        const listItem = document.createElement('li');
+        listItem.textContent = selectedColumn;
+
+        const removeButton = document.createElement('button');
+        removeButton.textContent = 'X';
+        removeButton.className = 'remove-button';
+        removeButton.onclick = () => {
+            selectedColumns.removeChild(listItem);
+            const option = document.createElement('option');
+            option.value = selectedColumn;
+            option.text = selectedColumn;
+            columnDropdown.add(option);
+
+            // Sort the options in the dropdown, excluding the placeholder
+            const optionsArray = Array.from(columnDropdown.options);
+            const placeholderIndex = optionsArray.findIndex(option => option.text === 'Select a column');
+            const placeholderOption = optionsArray.splice(placeholderIndex, 1)[0];
+
+            optionsArray.sort((a, b) => a.text.localeCompare(b.text));
+
+            // Re-insert the placeholder at the top
+            columnDropdown.insertBefore(placeholderOption, columnDropdown.firstChild);
+
+            optionsArray.forEach(option => columnDropdown.add(option));
+        };
+
+        listItem.appendChild(removeButton);
+        selectedColumns.appendChild(listItem);
+
+        // Remove the selected option from the dropdown
+        columnDropdown.remove(columnDropdown.selectedIndex);
+    }
+
+
+    // Function to fetch and display preview records
+    async function previewRecords() {
+        // Call the function to fetch records
+        var previewData = await fetchPreviewRecords();
+        if (!previewData) {
+            console.error("No preview data available");
+            return;
+        }
+        console.log("Preview Data:", previewData);
+
+        const { headers, rows } = previewData;
+
+        // Open a new window for the popup dialog
+        var popupWindow = window.open("", "Preview", "width=800,height=600");
+
+        // Write HTML content to the popup window with styling
+        popupWindow.document.write(`
+        <html>
+            <head>
+                <title>Preview Records</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        margin: 0;
+                        padding: 20px;
+                        background-color: #f4f4f4;
+                        color: #333;
+                    }
+                    h2 {
+                        color: #007BFF;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin-top: 20px;
+                    }
+                    table, th, td {
+                        border: 1px solid #cccccc;
+                    }
+                    th, td {
+                        padding: 12px;
+                        text-align: left;
+                    }
+                    th {
+                        background-color: #007BFF;
+                        color: #ffffff;
+                    }
+                    tr:nth-child(even) {
+                        background-color: #f9f9f9;
+                    }
+                    tr:hover {
+                        background-color: #f1f1f1;
+                    }
+                </style>
+            </head>
+            <body>
+                <h2>Preview Records</h2>
+                <table>
+                    <tr>
+                        ${headers.map(header => `<th>${header}</th>`).join('')}
+                    </tr>
+                    ${rows.map(row => `
+                        <tr>
+                            ${row.map(cell => `<td>${cell ? cell.toString().replace(/"/g, '') : ''}</td>`).join('')}
+                        </tr>`).join('')}
+                </table>
+            </body>
+        </html>
+    `);
+
+        popupWindow.document.close();
+    }
+
+
+    async function fetchPreviewRecords() {
+        // var datasetId = document.getElementById('dataset').value;
+        var tableId = document.getElementById('tableName').value;
+        var sheetName = document.getElementById('sheetName').value;
+        // var datasetDropdown = document.getElementById("dataset");
+        var tableNameDropdown = document.getElementById("tableName");
+        var recordLimit = 100;
+        var filterStatement = "";
+        var filterStatement = "";
+        var selectedColumns = getSelectedColumnsValues();
+        var orderByColumns = "";
+        const filterTextArea = document.getElementById('filterTextarea');
+        const selectTextarea = document.getElementById('selectTextarea');
+        const orderTextarea = document.getElementById('orderTextarea');
+
+        if (filterTextArea) {
+            filterStatement = filterTextArea.value.trim();
+        }
+
+        if (orderTextarea) {
+            orderByColumns = orderTextarea.value.trim();
+        }
+
+        document.getElementById('previewButton').disabled = true;
+        // datasetDropdown.disabled = true;
+        tableNameDropdown.disabled = true;
+        document.getElementById('previewButton').classList.add('loading');
+
+        try {
+            const data = await new Promise((resolve, reject) => {
+                google.script.run.withSuccessHandler(resolve)
+                    .withFailureHandler(reject)
+                    .extractRawDataFromBigQuery(tableId, filterStatement, selectedColumns, orderByColumns, recordLimit, recordLimit);
+            });
+
+            document.getElementById('previewButton').disabled = false;
+            // datasetDropdown.disabled = false;
+            tableNameDropdown.disabled = false;
+            document.getElementById('previewButton').classList.remove('loading');
+
+            console.log("Data:", data);
+
+            const fetchedRows = data.rows;
+            const fetchedHeaders = data.headers;
+
+            return { headers: fetchedHeaders, rows: fetchedRows };
+        } catch (error) {
+            console.error("An error occurred:", error);
+            setErrorMessage('message', `${error}`);
+
+            document.getElementById('previewButton').disabled = false;
+            // datasetDropdown.disabled = false;
+            tableNameDropdown.disabled = false;
+            document.getElementById('previewButton').classList.remove('loading');
+
+            return null;
+        }
+    }
+
+</script>

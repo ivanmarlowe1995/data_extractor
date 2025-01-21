@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <?!= include('Stylesheet'); ?>
+</head>
+<body>
+    <div class="banner">Go2 Data Extractor</div>
+    <div class="content">
+        <!-- <p class="description">Select Dataset:</p>
+        <select class="dropdown" id="dataset">
+            <option value="">Select a dataset</option>
+        </select> -->
+        <p class="description">Table Name:</p>
+        <select class="dropdown" id="tableName" onchange="loadColumns()">
+            <option value="">Select a Table</option>
+        </select>
+        <p class="description">Sheet Name:</p>
+        <input type="text" class="dropdown text-input" id="sheetName">
+        <p class="description">Limit Records:</p>
+        <input type="number" class="dropdown text-input" id="recordLimit" min="0" oninput="validity.valid||(value='');" required>
+        
+        <div class="checkbox-flex-container">
+            <div class="checkbox-container">
+                <label for="loadTemplate">Template</label>
+                <input type="checkbox" id="loadTemplate" class="checkbox">
+            </div>
+            <div class="checkbox-container">
+                <label for="applyFilter">Filter</label>
+                <input type="checkbox" id="applyFilter" class="checkbox">
+            </div>
+        </div>
+
+        <!-- New checkboxes for ORDER and SELECT -->
+        <div class="checkbox-flex-container">
+            <div class="checkbox-container">
+                <label for="applyOrder">Order</label>
+                <input type="checkbox" id="applyOrder" class="checkbox">
+            </div>
+            <div class="checkbox-container">
+                <label for="applySelect">Select</label>
+                <input type="checkbox" id="applySelect" class="checkbox" onchange="toggleSelectColumns()">
+            </div>
+        </div>
+        
+        <!-- Container for column selection -->
+        <div id="selectContainer" style="display: none;">
+            <p class="description">Select Column:</p>
+            <select class="dropdown" id="columnDropdown">
+                <option value="">Select a column</option>
+            </select>
+            <button class="button" onclick="addColumn()">Add</button>
+            <ul id="selectedColumns"></ul>
+        </div>
+        
+        <div id="filterContainer"></div>
+        <div id="orderContainer"></div>
+        
+        <button class="button" id="extractButton">Extract</button>
+        <button class="button" id="previewButton">Preview</button>
+        <div id="message" style="display: none;"></div>
+    </div>
+    <?!= include('BQApi'); ?>
+    <?!= include('Helper'); ?>
+    <?!= include('UIActions'); ?>
+</body>
+</html>

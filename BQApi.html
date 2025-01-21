@@ -1,0 +1,140 @@
+<script>
+  window.addEventListener('load', function () {
+    document.getElementById('extractButton').addEventListener('click', function () {
+      const tableNameDropdown = document.getElementById("tableName");
+      // const datasetDropdown = document.getElementById("dataset");
+
+      if (confirm("Are you sure you want to extract data?")) {
+        // datasetDropdown.disabled = true;
+        tableNameDropdown.disabled = true;
+        this.disabled = true;
+
+        document.getElementById('extractButton').classList.add('loading');
+
+        // var datasetId = document.getElementById('dataset').value;
+        var tableId = document.getElementById('tableName').value;
+        var sheetName = document.getElementById('sheetName').value;
+        var recordLimit = document.getElementById('recordLimit').value;
+        var filterStatement = "";
+        var selectedColumns = getSelectedColumnsValues();
+        var orderByColumns = "";
+        const filterTextArea = document.getElementById('filterTextarea');
+        const orderTextarea = document.getElementById('orderTextarea');
+
+        if (filterTextArea) {
+          filterStatement = filterTextArea.value.trim();
+        }
+
+        if (orderTextarea) {
+          orderByColumns = orderTextarea.value.trim();
+        }
+
+        google.script.run.withSuccessHandler((data) => {
+          document.getElementById('extractButton').disabled = false;
+          // datasetDropdown.disabled = false;
+          tableNameDropdown.disabled = false;
+          setFlashMessage('message', `Success! Record count: ${data.length}`);
+          document.getElementById('extractButton').classList.remove('loading');
+        }).withFailureHandler((error) => {
+          console.error("An error occurred: ", error);
+          setErrorMessage('message', `${error}`);
+          document.getElementById('extractButton').disabled = false;
+          // datasetDropdown.disabled = false;
+          tableNameDropdown.disabled = false;
+          document.getElementById('extractButton').classList.remove('loading');
+        }).extractDataFromBigQuery(tableId, sheetName, filterStatement, recordLimit, selectedColumns, orderByColumns);
+      }
+    });
+
+    // populateDatasets();
+    updateTablesDropdown();
+    // initPopulateTables();
+    initTableChangeListener();
+  });
+
+  function getSelectedColumnsValues() {
+    const selectedColumnsList = document.getElementById('selectedColumns');
+    if (selectedColumnsList) {
+      const listItems = selectedColumnsList.getElementsByTagName('li');
+      const values = Array.from(listItems).map(item => {
+        // Assuming the column name is the first child node of the list item
+        return item.childNodes[0].textContent;
+      });
+      return values;
+    } else {
+      return [];
+    }
+  }
+
+  // function initPopulateTables() {
+  //   const datasetDropdown = document.getElementById("dataset");
+  //   datasetDropdown.addEventListener('change', function () {
+  //     clearInputsAndCheckboxes();
+  //     updateTablesDropdown();
+  //   });
+  // }
+
+  function initTableChangeListener() {
+    const tableNameDropdown = document.getElementById("tableName");
+    tableNameDropdown.addEventListener('change', function () {
+      clearInputsAndCheckboxes();
+    });
+  }
+
+  function updateTablesDropdown() {
+    const tableNameDropdown = document.getElementById("tableName");
+    // const datasetDropdown = document.getElementById("dataset");
+    // const datasetId = datasetDropdown.value;
+
+    tableNameDropdown.innerHTML = "";
+    var defaultOption = document.createElement('option');
+    const defaultValue = "Select a table";
+    defaultOption.value = defaultValue;
+    defaultOption.innerHTML = defaultValue;
+    tableNameDropdown.appendChild(defaultOption);
+
+    google.script.run.withSuccessHandler(function (tables) {
+      tables.forEach(function (tableId) {
+        var option = document.createElement("option");
+        option.value = tableId;
+        option.text = tableId;
+        tableNameDropdown.appendChild(option);
+      });
+    }).extractAllTables();
+  }
+
+  // function populateDatasets() {
+  //   var datasetDropdown = document.getElementById("dataset");
+
+  //   google.script.run.withSuccessHandler(function (datasets) {
+  //     datasets.forEach(function (datasetId) {
+  //       var option = document.createElement("option");
+  //       option.value = datasetId;
+  //       option.text = datasetId;
+  //       datasetDropdown.appendChild(option);
+  //     });
+  //   }).extractAllDataset();
+  // }
+
+  function clearInputsAndCheckboxes() {
+    document.getElementById('sheetName').value = "";
+    document.getElementById('recordLimit').value = "";
+    document.getElementById('loadTemplate').checked = false;
+    document.getElementById('applyFilter').checked = false;
+    const filterTextArea = document.getElementById('filterTextarea');
+    if (filterTextArea) {
+      filterTextArea.value = "";
+      filterTextArea.style.display = 'none';
+    }
+  }
+
+  document.getElementById('applyFilter').addEventListener('change', function () {
+    const filterTextArea = document.getElementById('filterTextarea');
+    if (this.checked) {
+      filterTextArea.style.display = 'block';
+    } else {
+      filterTextArea.style.display = 'none';
+      filterTextArea.value = "";
+    }
+  });
+</script>

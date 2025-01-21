@@ -1,0 +1,18 @@
+<script>
+  function setFlashMessage(elementId, message) {
+    const messageElement = document.getElementById(elementId);
+    messageElement.innerText = message;
+    messageElement.style.color = 'green';
+    messageElement.style.display = 'block';
+    setTimeout(() => {
+      messageElement.style.display = 'none';
+    }, 10000);
+  }
+
+  function setErrorMessage(elementId, message) {
+    const messageElement = document.getElementById(elementId);
+    messageElement.innerText = message;
+    messageElement.style.color = 'red';
+    messageElement.style.display = 'block';
+  }
+</script>
